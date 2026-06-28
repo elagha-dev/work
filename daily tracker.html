@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Work Tracker</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f7f6f3;
+    --surface:#ffffff;
+    --surface2:#f0efe9;
+    --border:#e2e1da;
+    --border-strong:#c8c7bf;
+    --text:#1a1a18;
+    --text-secondary:#5a5a56;
+    --text-muted:#9a9994;
+    --accent:#2563eb;
+    --accent-bg:#eff6ff;
+    --accent-text:#1d4ed8;
+    --success-bg:#f0fdf4;
+    --success-text:#166534;
+    --warning-bg:#fffbeb;
+    --warning-text:#92400e;
+    --danger-bg:#fef2f2;
+    --danger-text:#991b1b;
+    --pro-bg:#faf5ff;
+    --pro-text:#6b21a8;
+    --radius:8px;
+    --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  }
+  body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+  .app{max-width:960px;margin:0 auto;padding:24px 16px}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+  .header-left h1{font-size:20px;font-weight:600;color:var(--text)}
+  .header-left .subtitle{font-size:13px;color:var(--text-muted);margin-top:2px}
+  .header-right{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .day-nav{display:flex;align-items:center;gap:6px}
+  .day-nav button{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px 10px;cursor:pointer;font-size:12px;color:var(--text-secondary)}
+  .day-nav button:hover{background:var(--surface2);border-color:var(--border-strong)}
+  .today-btn{background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:var(--radius);padding:5px 10px;cursor:pointer;font-size:12px;font-weight:500;line-height:1.4}
+  .today-btn:hover{background:#1d4ed8;border-color:#1d4ed8}
+  .day-label{font-size:13px;font-weight:500;color:var(--text);min-width:120px;text-align:center}
+  .hist-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;cursor:pointer;font-size:12px;color:var(--text-secondary)}
+  .hist-btn:hover{background:var(--surface2)}
+  button:focus,button:focus-visible,select:focus,select:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-bg)}
+  .today-btn:focus,.today-btn:focus-visible{box-shadow:0 0 0 3px rgba(37,99,235,.35)}
+  .add-row .btn-add:focus,.add-row .btn-add:focus-visible{box-shadow:0 0 0 3px rgba(37,99,235,.35)}
+  .carryover{background:var(--warning-bg);border:1px solid #fcd34d;border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--warning-text);display:none}
+  .carryover.show{display:block}
+  /* Undo bar */
+  .undo-bar{background:#1e293b;color:#f1f5f9;border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:13px;display:none;align-items:center;gap:10px;flex-wrap:wrap}
+  .undo-bar.show{display:flex}
+  .undo-bar span{flex:1}
+  .undo-btn{background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px;font-weight:600}
+  .undo-btn:hover{background:#2563eb}
+  .undo-dismiss{background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;line-height:1;padding:0 4px}
+  /* Grid */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .section-full{grid-column:1/-1}
+  .section{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .sec-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+  .sec-head h2{font-size:13px;font-weight:600;flex:1;color:var(--text)}
+  .badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px}
+  .b-todo{background:var(--warning-bg);color:var(--warning-text)}
+  .b-progress{background:var(--accent-bg);color:var(--accent-text)}
+  .b-done{background:var(--success-bg);color:var(--success-text)}
+  .b-planned{background:var(--pro-bg);color:var(--pro-text)}
+  .b-parking{background:var(--surface2);color:var(--text-secondary)}
+  .b-eod{background:var(--surface2);color:var(--text-muted)}
+  .chevron{font-size:12px;color:var(--text-muted);transition:transform .2s}
+  .chevron.open{transform:rotate(180deg)}
+  .tbl-wrap{overflow-x:auto;flex:1}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;padding:7px 12px;color:var(--text-muted);font-weight:500;font-size:11px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:7px 12px;vertical-align:top;border-bottom:1px solid var(--border)}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--surface2)}
+  .pill{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;white-space:nowrap}
+  .p-open{background:var(--warning-bg);color:var(--warning-text)}
+  .p-progress{background:var(--accent-bg);color:var(--accent-text)}
+  .p-done{background:var(--success-bg);color:var(--success-text)}
+  .p-blocked{background:var(--danger-bg);color:var(--danger-text)}
+  .p-scheduled{background:var(--pro-bg);color:var(--pro-text)}
+  .p-notstarted{background:var(--surface2);color:var(--text-secondary)}
+  .status-select{font-size:10px;font-weight:600;padding:2px 6px;border-radius:999px;white-space:nowrap;border:1px solid transparent;cursor:pointer;outline:none;-webkit-appearance:none;-moz-appearance:none;appearance:none;font-family:inherit}
+  .status-select:hover{border-color:var(--border-strong)}
+  .status-select:focus{border-color:var(--accent)}
+  .notes-cell{color:var(--text-secondary);max-width:200px;word-break:break-word;white-space:pre-line}
+  .del-btn{cursor:pointer;color:var(--text-muted);font-size:15px;line-height:1;padding:0 2px;border:none;background:none}
+  .del-btn:hover{color:var(--danger-text)}
+  .empty-row td{color:var(--text-muted);font-size:12px;text-align:center;padding:14px;font-style:italic}
+  /* Origin tag */
+  .origin-tag{display:inline-block;font-size:9px;font-weight:600;padding:1px 5px;border-radius:4px;background:#e0e7ff;color:#3730a3;margin-left:4px;vertical-align:middle;white-space:nowrap}
+  /* Meeting tag / fields */
+  .meeting-tag{display:inline-block;font-size:9px;font-weight:600;padding:1px 5px;border-radius:4px;background:var(--pro-bg);color:var(--pro-text);margin-left:4px;vertical-align:middle;white-space:nowrap}
+  .meeting-meta{display:block;font-size:11px;color:var(--text-muted);margin-top:3px}
+  .meeting-meta b{color:var(--text-secondary);font-weight:600}
+  .meeting-toggle{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);padding:5px 8px;white-space:nowrap;cursor:pointer;user-select:none}
+  .meeting-toggle input{cursor:pointer;width:14px;height:14px}
+  .inp-meetingdate,.inp-participants{font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);outline:none}
+  .inp-meetingdate:focus,.inp-participants:focus{border-color:var(--accent)}
+  .inp-meetingdate{flex:1;min-width:120px}
+  .inp-participants{flex:2;min-width:120px}
+  /* ETA */
+  .eta-cell{white-space:nowrap;font-size:12px}
+  .eta-overdue{color:#dc2626;font-weight:700}
+  .inp-eta{font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);outline:none;min-width:110px}
+  .inp-eta:focus{border-color:var(--accent)}
+  /* Add row */
+  .add-row{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--border);flex-wrap:wrap;background:var(--surface2)}
+  .add-row input,.add-row select{font-size:12px;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);outline:none}
+  .add-row input:focus,.add-row select:focus{border-color:var(--accent)}
+  .add-row .inp-task{flex:2;min-width:100px}
+  .add-row .inp-owner{flex:1;min-width:70px}
+  .add-row .inp-notes{flex:2;min-width:80px}
+  .add-row .btn-add{padding:5px 12px;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;font-size:12px;font-weight:500;white-space:nowrap}
+  .add-row .btn-add:hover{background:#1d4ed8}
+  .add-row-extra{display:none;flex-basis:100%;gap:6px;flex-wrap:wrap;padding-top:2px}
+  .add-row-extra.show{display:flex}
+  /* Generated note */
+  .note-headline{font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px}
+  .note-subline{font-size:11px;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+  .note-block{margin-bottom:10px}
+  .note-block:last-child{margin-bottom:0}
+  .note-block-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+  .note-block ul{margin:0;padding-left:18px}
+  .note-block li{margin-bottom:2px}
+  .note-empty-line{color:var(--text-muted);font-style:italic;font-size:12px}
+  /* Summary */
+  .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+  .summary-card h2{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text)}
+  .summary-text{font-size:13px;color:var(--text-secondary);line-height:1.6;min-height:40px;padding:14px 16px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)}
+  .sum-section{margin-bottom:12px}.sum-section:last-child{margin-bottom:0}
+  .sum-label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+  .sum-label::after{content:'';flex:1;height:1px;background:var(--border)}
+  .sum-items{display:flex;flex-wrap:wrap;gap:5px}
+  .sum-chip{font-size:11px;font-weight:500;padding:3px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);white-space:nowrap}
+  .chip-wip{background:var(--accent-bg);color:var(--accent-text);border-color:#bfdbfe}
+  .chip-done{background:var(--success-bg);color:var(--success-text);border-color:#bbf7d0}
+  .chip-planned{background:var(--pro-bg);color:var(--pro-text);border-color:#e9d5ff}
+  .chip-hold{background:var(--danger-bg);color:var(--danger-text);border-color:#fecaca}
+  .sum-empty{font-style:italic;color:var(--text-muted);font-size:12px}
+  .summary-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .summary-actions button{font-size:12px;padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-weight:500}
+  .summary-actions button:hover{background:var(--surface2);border-color:var(--border-strong)}
+  .copy-confirm{font-size:12px;color:var(--success-text);display:none}
+  /* History */
+  .hist-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:none}
+  .hist-overlay.show{display:block}
+  .hist-panel{position:fixed;right:0;top:0;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border);z-index:101;overflow-y:auto;padding:20px;display:none}
+  .hist-panel.show{display:block}
+  .hist-panel h2{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .hist-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)}
+  .hist-day{margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .hist-day-head{padding:8px 12px;background:var(--surface2);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;display:flex;justify-content:space-between}
+  .hist-day-body{padding:10px 12px;font-size:12px;color:var(--text-secondary);display:none}
+  .hist-day-body.open{display:block}
+  .hist-item{padding:3px 0;display:flex;gap:6px;align-items:baseline}
+  .hist-status{font-size:10px;font-weight:600;padding:1px 5px;border-radius:999px;white-space:nowrap}
+  .readonly-banner{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-size:12px;color:var(--text-secondary);margin-bottom:14px;display:none}
+  .readonly-banner.show{display:block}
+  /* Confirm modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:center;justify-content:center}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--surface);border-radius:12px;padding:24px;max-width:340px;width:90%;box-shadow:0 8px 30px rgba(0,0,0,.15)}
+  .modal h3{font-size:15px;font-weight:600;margin-bottom:8px;color:var(--text)}
+  .modal p{font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5}
+  .modal-task{font-weight:600;color:var(--text)}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end}
+  .modal-cancel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 16px;cursor:pointer;font-size:13px;color:var(--text)}
+  .modal-cancel:hover{border-color:var(--border-strong)}
+  .modal-confirm{background:#dc2626;border:none;border-radius:var(--radius);padding:6px 16px;cursor:pointer;font-size:13px;font-weight:600;color:#fff}
+  .modal-confirm:hover{background:#b91c1c}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <h1>Daily tracker</h1>
+      <div class="subtitle" id="fullDate"></div>
+    </div>
+    <div class="header-right">
+      <div class="day-nav">
+        <button onclick="shiftDay(-1)">Prev</button>
+        <div class="day-label" id="dayLabel"></div>
+        <button onclick="shiftDay(1)">Next</button>
+      </div>
+      <button class="today-btn" onclick="goToday()">Today</button>
+      <button class="hist-btn" onclick="openHistory()">History</button>
+    </div>
+  </div>
+
+  <div class="readonly-banner" id="readonlyBanner">Viewing a past day — read only. Switch to today to make changes.</div>
+  <div class="carryover" id="carryBanner"></div>
+
+  <!-- Undo bar -->
+  <div class="undo-bar" id="undoBar">
+    <span id="undoMsg"></span>
+    <button class="undo-btn" onclick="doUndo()">Undo</button>
+    <button class="undo-dismiss" onclick="dismissUndo()" title="Dismiss">×</button>
+  </div>
+
+  <div class="grid" id="mainGrid"></div>
+
+  <div style="margin-top:14px" class="summary-card">
+    <h2>Teams daily summary</h2>
+    <div class="summary-text" id="summaryText">Click "Generate" to build your daily update.</div>
+    <div class="summary-actions">
+      <button onclick="generateSummary()">Generate</button>
+      <button onclick="copySummary()">Copy</button>
+      <span class="copy-confirm" id="copyConfirm">Copied</span>
+    </div>
+  </div>
+</div>
+
+<!-- History panel -->
+<div class="hist-overlay" id="histOverlay" onclick="closeHistory()"></div>
+<div class="hist-panel" id="histPanel">
+  <h2>History <span style="display:flex;gap:6px;align-items:center"><button class="hist-btn" onclick="exportData()" style="font-size:11px;padding:3px 8px">Export JSON</button><button class="hist-close" onclick="closeHistory()">×</button></span></h2>
+  <div id="histContent"></div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal-overlay" id="delModal">
+  <div class="modal">
+    <h3>Delete task?</h3>
+    <p>This will remove <span class="modal-task" id="delTaskName"></span>. You can undo immediately after.</p>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="cancelDelete()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Section order: todo, planned, inprogress, achieved, parking, eod
+const SECTIONS = [
+  {id:'todo',      label:'To do',             badge:'b-todo',    col:'half'},
+  {id:'planned',   label:'Planned',           badge:'b-planned', col:'half'},
+  {id:'inprogress',label:'In progress',       badge:'b-progress',col:'half'},
+  {id:'parking',   label:'Parking / Out of scope', badge:'b-parking', col:'half'},
+  {id:'achieved',  label:'Achieved / Done',   badge:'b-done',    col:'full'},
+  {id:'eod',       label:'End of day notes / meeting notes', badge:'b-eod', col:'full'},
+];
+
+const SECTION_LABEL = {};
+SECTIONS.forEach(s=>SECTION_LABEL[s.id]=s.label);
+
+const STATUS_CLASS = {
+  'Open':'p-open','In progress':'p-progress','Done':'p-done',
+  'Blocked':'p-blocked','Scheduled':'p-scheduled','Not started':'p-notstarted'
+};
+const STATUSES = ['Open','In progress','Done','Blocked','Scheduled','Not started'];
+
+const STATUS_SECTION = {
+  'Open':'todo',
+  'Not started':'planned',
+  'In progress':'inprogress',
+  'Scheduled':'planned',
+  'Blocked':'parking',
+  'Done':'achieved'
+};
+
+const SECTION_DEFAULT_STATUS = {
+  'todo':'Open',
+  'planned':'Not started',
+  'inprogress':'In progress',
+  'parking':'Blocked',
+  'achieved':'Done',
+  'eod':'Open'
+};
+let pendingDelete = null;
+
+// Undo stack (single level)
+let undoSnapshot = null;
+let undoTimer = null;
+
+function esc(s){
+  return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function todayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function keyToDisplay(k){
+  const [y,m,d]=k.split('-');
+  return new Date(y,m-1,d).toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+}
+function keyToFull(k){
+  const [y,m,d]=k.split('-');
+  return new Date(y,m-1,d).toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+function shiftKey(k,n){
+  const [y,m,d]=k.split('-').map(Number);
+  const dt=new Date(y,m-1,d);dt.setDate(dt.getDate()+n);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+function isPastDate(dateStr){
+  if(!dateStr) return false;
+  const d=new Date(dateStr+'T00:00:00');
+  if(isNaN(d.getTime())) return false;
+  const today=new Date();today.setHours(0,0,0,0);
+  return d.getTime()<today.getTime();
+}
+function formatEta(dateStr){
+  if(!dateStr) return '';
+  const d=new Date(dateStr+'T00:00:00');
+  if(isNaN(d.getTime())) return esc(dateStr);
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+function formatMeetingDate(dateStr){
+  if(!dateStr) return '';
+  const d=new Date(dateStr+'T00:00:00');
+  if(isNaN(d.getTime())) return esc(dateStr);
+  return d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+}
+
+function loadAll(){try{return JSON.parse(localStorage.getItem('wt_all')||'{}')}catch{return{}}}
+function saveAll(all){localStorage.setItem('wt_all',JSON.stringify(all))}
+function getDay(key){const all=loadAll();if(!all[key])all[key]=emptyDay();return all[key]}
+function saveDay(key,day){const all=loadAll();all[key]=day;saveAll(all)}
+function emptyDay(){return {todo:[],inprogress:[],planned:[],parking:[],achieved:[],eod:[]}}
+function deepClone(obj){return JSON.parse(JSON.stringify(obj))}
+
+function seedToday(){
+  const key=todayKey();
+  const all=loadAll();
+  if(!all[key]){
+    all[key]=emptyDay();
+    saveAll(all);
+  }
+}
+
+function carryOver(viewKey){
+  const prevKey=shiftKey(viewKey,-1);
+  const all=loadAll();
+  const prev=all[prevKey];
+  const today=all[viewKey]||emptyDay();
+  if(!prev) return null;
+  // Carry unfinished todo AND inprogress from yesterday
+  const unfinishedTodo=(prev.todo||[]).filter(t=>t.status!=='Done');
+  const unfinishedWip=(prev.inprogress||[]).filter(t=>t.status!=='Done');
+  const existingTodo=new Set((today.todo||[]).map(t=>t.task));
+  const existingWip=new Set((today.inprogress||[]).map(t=>t.task));
+  const todoToAdd=unfinishedTodo.filter(t=>!existingTodo.has(t.task));
+  const wipToAdd=unfinishedWip.filter(t=>!existingWip.has(t.task));
+  if(!todoToAdd.length&&!wipToAdd.length) return null;
+  today.todo=[...todoToAdd,...(today.todo||[])];
+  today.inprogress=[...wipToAdd,...(today.inprogress||[])];
+  all[viewKey]=today;
+  saveAll(all);
+  return todoToAdd.length+wipToAdd.length;
+}
+
+let viewKey=todayKey();
+let collapsed={};
+let _carryOverDone=false;
+function isToday(){return viewKey===todayKey()}
+function isReadonly(){return !isToday()}
+
+// Undo logic
+function saveUndo(msg){
+  const day=getDay(viewKey);
+  undoSnapshot={day:deepClone(day),msg};
+  clearTimeout(undoTimer);
+  document.getElementById('undoMsg').textContent=msg;
+  document.getElementById('undoBar').className='undo-bar show';
+  undoTimer=setTimeout(dismissUndo,8000);
+}
+function doUndo(){
+  if(!undoSnapshot) return;
+  saveDay(viewKey,undoSnapshot.day);
+  dismissUndo();
+  render();
+}
+function dismissUndo(){
+  undoSnapshot=null;
+  clearTimeout(undoTimer);
+  document.getElementById('undoBar').className='undo-bar';
+}
+
+// Delete with confirmation
+function delRow(secId,idx){
+  if(isReadonly()) return;
+  const day=getDay(viewKey);
+  const row=day[secId][idx];
+  pendingDelete={secId,idx,taskName:row.task};
+  document.getElementById('delTaskName').textContent='"'+row.task+'"';
+  document.getElementById('delModal').className='modal-overlay show';
+}
+function cancelDelete(){
+  pendingDelete=null;
+  document.getElementById('delModal').className='modal-overlay';
+}
+function confirmDelete(){
+  if(!pendingDelete) return;
+  const {secId,idx,taskName}=pendingDelete;
+  const day=getDay(viewKey);
+  saveUndo(`Deleted "${taskName}" — click Undo to restore`);
+  day[secId].splice(idx,1);
+  saveDay(viewKey,day);
+  pendingDelete=null;
+  document.getElementById('delModal').className='modal-overlay';
+  render();
+}
+
+function setStatus(secId,idx,newStatus){
+  if(isReadonly()) return;
+  const day=getDay(viewKey);
+  if(!day[secId]||!day[secId][idx]) return;
+  const row=day[secId][idx];
+  const oldSecLabel=SECTION_LABEL[secId]||secId;
+  const targetSec=STATUS_SECTION[newStatus]||secId;
+  row.status=newStatus;
+  if(targetSec!==secId){
+    saveUndo(`Moved "${row.task}" from ${oldSecLabel} to ${SECTION_LABEL[targetSec]}`);
+    row._from=oldSecLabel;
+    day[secId].splice(idx,1);
+    day[targetSec]=day[targetSec]||[];
+    day[targetSec].unshift(row);
+  }
+  saveDay(viewKey,day);
+  render();
+}
+
+function render(){
+  document.getElementById('dayLabel').textContent=viewKey===todayKey()?'Today':keyToDisplay(viewKey);
+  document.getElementById('fullDate').textContent=keyToFull(viewKey);
+  document.getElementById('readonlyBanner').className='readonly-banner'+(isReadonly()?' show':'');
+
+  const banner=document.getElementById('carryBanner');
+  if(isToday()){
+    if(!_carryOverDone){_carryOverDone=true;carryOver(viewKey);}
+    const day=getDay(viewKey);
+    const carried=(day.todo||[]).filter(t=>t._carried).length+(day.inprogress||[]).filter(t=>t._carried).length;
+    // Show banner if today has any carried items (marked during carryOver)
+    const all=loadAll();
+    const prevKey=shiftKey(viewKey,-1);
+    const prev=all[prevKey];
+    const n=prev?((prev.todo||[]).filter(t=>t.status!=='Done').length+(prev.inprogress||[]).filter(t=>t.status!=='Done').length):0;
+    if(n){
+      banner.textContent=`${n} unfinished task${n>1?'s':''} carried over from yesterday (To do + In progress).`;
+      banner.className='carryover show';
+    } else banner.className='carryover';
+  } else banner.className='carryover';
+
+  const day=getDay(viewKey);
+  const grid=document.getElementById('mainGrid');
+  grid.innerHTML='';
+
+  SECTIONS.forEach(sec=>{
+    const rows=day[sec.id]||[];
+    const isOpen=collapsed[sec.id]===undefined?true:!collapsed[sec.id];
+    const div=document.createElement('div');
+    div.className='section'+(sec.col==='full'?' section-full':'');
+    const ro=isReadonly();
+    const isPlanned=sec.id==='planned';
+    const isAchieved=sec.id==='achieved';
+    const extraCols=isPlanned?1:0;
+    const colCount=4+extraCols+(!ro?1:0);
+
+    const theadExtra=isPlanned?'<th>ETA</th>':'';
+
+    div.innerHTML=`
+      <div class="sec-head" onclick="toggleSec('${sec.id}')">
+        <h2>${sec.label}</h2>
+        <span class="badge ${sec.badge}">${rows.length}</span>
+        <span class="chevron ${isOpen?'open':''}">▼</span>
+      </div>
+      ${isOpen?`
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th style="width:35%">Task</th><th>Owner</th><th>Status</th>${theadExtra}<th>Notes</th>${!ro?'<th></th>':''}</tr></thead>
+          <tbody>
+            ${rows.length?rows.map((r,i)=>{
+              const overdue=isPlanned&&r.eta&&isPastDate(r.eta)&&r.status!=='Done';
+              const etaCell=isPlanned?`<td class="eta-cell">${r.eta?`<span class="${overdue?'eta-overdue':''}">${formatEta(r.eta)}${overdue?' (overdue)':''}</span>`:'<span style="color:var(--text-muted)">–</span>'}</td>`:'';
+              const meetingMeta=isAchieved&&r.isMeeting?`<span class="meeting-meta"><b>${formatMeetingDate(r.meetingDate)}</b>${r.participants?' · '+esc(r.participants):''}</span>`:'';
+              return `<tr>
+              <td>${esc(r.task)}${r._from?`<span class="origin-tag" title="Moved from ${esc(r._from)}">from: ${esc(r._from)}</span>`:''}${isAchieved&&r.isMeeting?`<span class="meeting-tag">MEETING</span>`:''}${meetingMeta}</td>
+              <td style="color:var(--text-secondary);white-space:nowrap">${esc(r.owner)}</td>
+              <td>${!ro?`<select class="status-select ${STATUS_CLASS[r.status]||'p-notstarted'}" onchange="setStatus('${sec.id}',${i},this.value)">${STATUSES.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}</select>`:`<span class="pill ${STATUS_CLASS[r.status]||'p-notstarted'}">${esc(r.status)}</span>`}</td>
+              ${etaCell}
+              <td class="notes-cell">${esc(r.notes)}</td>
+              ${!ro?`<td><button type="button" class="del-btn" onclick="delRow('${sec.id}',${i})" title="Remove">×</button></td>`:''}
+            </tr>`}).join(''):`<tr class="empty-row"><td colspan="${colCount}">Nothing here yet</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+      ${!ro?`<div class="add-row">
+        <input class="inp-task" id="t-${sec.id}" placeholder="Task" onkeydown="if(event.key==='Enter')addRow('${sec.id}')"/>
+        <input class="inp-owner" id="o-${sec.id}" placeholder="Owner" onkeydown="if(event.key==='Enter')addRow('${sec.id}')"/>
+        <select id="s-${sec.id}">${STATUSES.map(s=>`<option ${s===(SECTION_DEFAULT_STATUS[sec.id]||'Open')?'selected':''}>${s}</option>`).join('')}</select>
+        ${isPlanned?`<input type="date" class="inp-eta" id="eta-${sec.id}" title="ETA / due date"/>`:''}
+        <input class="inp-notes" id="n-${sec.id}" placeholder="Notes" onkeydown="if(event.key==='Enter')addRow('${sec.id}')"/>
+        ${isAchieved?`<label class="meeting-toggle"><input type="checkbox" id="ismeeting-${sec.id}" onchange="toggleMeetingFields('${sec.id}',this.checked)"/> Meeting?</label>
+        <div class="add-row-extra" id="meetingextra-${sec.id}">
+          <input type="date" class="inp-meetingdate" id="meetingdate-${sec.id}" value="${todayKey()}" title="Meeting date"/>
+          <input class="inp-participants" id="participants-${sec.id}" placeholder="Participants (comma separated)"/>
+        </div>`:''}
+        <button class="btn-add" onclick="addRow('${sec.id}')">+ Add</button>
+      </div>`:''}
+      `:''}
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function toggleSec(id){collapsed[id]=!collapsed[id];render()}
+
+function toggleMeetingFields(secId,checked){
+  const el=document.getElementById('meetingextra-'+secId);
+  if(el) el.className='add-row-extra'+(checked?' show':'');
+}
+
+function addRow(secId){
+  if(isReadonly()) return;
+  const t=document.getElementById('t-'+secId).value.trim();
+  if(!t) return;
+  const day=getDay(viewKey);
+  const row={
+    task:t,
+    owner:document.getElementById('o-'+secId).value.trim()||'–',
+    status:document.getElementById('s-'+secId).value,
+    notes:document.getElementById('n-'+secId).value.trim()
+  };
+  if(secId==='planned'){
+    const etaEl=document.getElementById('eta-'+secId);
+    row.eta=etaEl?etaEl.value:'';
+  }
+  if(secId==='achieved'){
+    const isMeetingEl=document.getElementById('ismeeting-'+secId);
+    if(isMeetingEl&&isMeetingEl.checked){
+      row.isMeeting=true;
+      row.meetingDate=document.getElementById('meetingdate-'+secId).value||todayKey();
+      row.participants=document.getElementById('participants-'+secId).value.trim();
+    }
+  }
+  day[secId].push(row);
+  saveDay(viewKey,day);
+  ['t-','o-','n-'].forEach(p=>{document.getElementById(p+secId).value='';});
+  if(secId==='planned'){const etaEl=document.getElementById('eta-'+secId);if(etaEl)etaEl.value='';}
+  if(secId==='achieved'){
+    const isMeetingEl=document.getElementById('ismeeting-'+secId);
+    if(isMeetingEl){
+      isMeetingEl.checked=false;
+      toggleMeetingFields(secId,false);
+      const pEl=document.getElementById('participants-'+secId);
+      if(pEl)pEl.value='';
+      const mdEl=document.getElementById('meetingdate-'+secId);
+      if(mdEl)mdEl.value=todayKey();
+    }
+  }
+  render();
+}
+
+function shiftDay(n){viewKey=shiftKey(viewKey,n);render()}
+function goToday(){viewKey=todayKey();render()}
+
+function buildSummaryData(viewKey){
+  const day=getDay(viewKey);
+  const dateLabel=keyToFull(viewKey);
+  const wip=(day.inprogress||[]).map(r=>`${r.task}${r.owner&&r.owner!=='–'?' ('+r.owner+')':''}`);
+  const done=(day.achieved||[]).filter(r=>r.status==='Done').map(r=>{
+    if(r.isMeeting){
+      const metaParts=[];
+      if(r.meetingDate) metaParts.push(formatMeetingDate(r.meetingDate));
+      if(r.participants) metaParts.push('with '+r.participants);
+      return `${r.task}${metaParts.length?' — '+metaParts.join(', '):''}`;
+    }
+    return r.task;
+  });
+  const next=(day.planned||[]).map(r=>{
+    const eta=r.eta?formatEta(r.eta):'TBD';
+    const overdue=r.eta&&isPastDate(r.eta)&&r.status!=='Done';
+    return `${r.task} — ETA: ${eta}${overdue?' (overdue)':''}`;
+  });
+  const blocked=(day.parking||[]).filter(r=>r.status==='Blocked').map(r=>`${r.task}${r.owner&&r.owner!=='–'?' ('+r.owner+')':''}`);
+  return {dateLabel,wip,done,next,blocked};
+}
+
+function generateSummary(){
+  const {dateLabel,wip,done,next,blocked}=buildSummaryData(viewKey);
+  const block=(title,items)=>`
+    <div class="note-block">
+      <div class="note-block-title">${title}</div>
+      ${items.length?`<ul>${items.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:`<div class="note-empty-line">Nothing here</div>`}
+    </div>`;
+  const html=`
+    <div class="note-headline">Daily Update — ${esc(dateLabel)}</div>
+    <div class="note-subline">${viewKey===todayKey()?'Today':keyToDisplay(viewKey)}</div>
+    ${block('Working on',wip)}
+    ${block('Completed',done)}
+    ${block('Upcoming',next)}
+    ${block('On hold / blocked',blocked)}
+  `;
+  document.getElementById('summaryText').innerHTML=html;
+}
+
+function copySummary(){
+  const {dateLabel,wip,done,next,blocked}=buildSummaryData(viewKey);
+  const section=(title,items)=>`${title}\n${items.length?items.map(t=>`  • ${t}`).join('\n'):'  Nothing here'}`;
+  const text=[
+    `Daily Update — ${dateLabel}`,'',
+    section('Working on',wip),'',
+    section('Completed',done),'',
+    section('Upcoming',next),'',
+    section('On hold / blocked',blocked)
+  ].join('\n');
+  navigator.clipboard.writeText(text).then(()=>{
+    const c=document.getElementById('copyConfirm');
+    c.style.display='inline';setTimeout(()=>c.style.display='none',2000);
+  }).catch(()=>{});
+}
+
+function openHistory(){
+  const all=loadAll();
+  const keys=Object.keys(all).sort().reverse();
+  const cont=document.getElementById('histContent');
+  if(!keys.length){cont.innerHTML='<p style="color:var(--text-muted);font-size:13px">No history yet.</p>';}
+  else{
+    cont.innerHTML=keys.map(k=>{
+      const day=all[k];
+      const tasks=[...(day.todo||[]),...(day.planned||[]),...(day.inprogress||[]),...(day.achieved||[]),...(day.parking||[])];
+      return `<div class="hist-day">
+        <div class="hist-day-head" onclick="toggleHistDay(this)" ondblclick="navToDay('${k}')">${keyToDisplay(k)} <span style="display:flex;gap:8px;align-items:center"><span style="font-size:10px;color:var(--text-muted);font-weight:400">dbl-click to view</span><span>${tasks.length} tasks</span></span></div>
+        <div class="hist-day-body">
+          ${tasks.length?tasks.map(t=>{
+            const overdue=t.eta&&isPastDate(t.eta)&&t.status!=='Done';
+            const etaPart=t.eta?` · ETA: <span class="${overdue?'eta-overdue':''}">${formatEta(t.eta)}</span>`:'';
+            const meetingPart=t.isMeeting?` <span class="meeting-tag">MEETING</span> ${formatMeetingDate(t.meetingDate)}${t.participants?' · '+esc(t.participants):''}`:'';
+            return `<div class="hist-item">
+            <span class="hist-status pill ${STATUS_CLASS[t.status]||'p-notstarted'}">${esc(t.status)}</span>
+            <span>${esc(t.task)}${t.owner&&t.owner!=='–'?' · '+esc(t.owner):''}${etaPart}${meetingPart}</span>
+          </div>`;
+          }).join(''):'<span style="color:var(--text-muted)">No tasks</span>'}
+          ${(day.eod||[]).length?'<div style="margin-top:6px;font-size:11px;color:var(--text-muted)">Notes: '+esc(day.eod.map(e=>e.task).join('; '))+'</div>':''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('histOverlay').className='hist-overlay show';
+  document.getElementById('histPanel').className='hist-panel show';
+}
+function exportData(){
+  const all=loadAll();
+  const blob=new Blob([JSON.stringify(all,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`work-tracker-backup-${todayKey()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function closeHistory(){
+  document.getElementById('histOverlay').className='hist-overlay';
+  document.getElementById('histPanel').className='hist-panel';
+}
+function navToDay(k){viewKey=k;closeHistory();render()}
+function toggleHistDay(el){el.nextElementSibling.classList.toggle('open')}
+
+// Close modal on overlay click
+document.getElementById('delModal').addEventListener('click',function(e){
+  if(e.target===this) cancelDelete();
+});
+
+seedToday();
+render();
+</script>
+</body>
+</html>
